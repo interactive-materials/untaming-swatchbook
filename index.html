@@ -1,0 +1,1709 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Anonymous Swatchbook — Clean (Tags + Sort)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0b0c;
+      --fg: #f3f4f6;
+      --muted: #a1a1aa;
+      --card: #141417;
+      --border: #2a2a2f;
+      --accent: #9ae6b4;
+      --subgrid-rows: 2;
+      --card-w: 230px;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font: 16px/1.5 "Space Grotesk", system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell,
+        Noto Sans, Arial, sans-serif;
+      overflow-x: auto;
+      overflow-y: hidden; /* no vertical scroll */
+    }
+
+    .container {
+      width: max-content;
+      min-width: 100vw;
+      height: 100%;
+      box-sizing: border-box;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .pill {
+      border: 1px solid var(--border);
+      background: var(--card);
+      border-radius: 999px;
+      padding: 8px 12px;
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    input[type="text"] {
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--fg);
+      border-radius: 10px;
+      padding: 10px 12px;
+      outline: none;
+    }
+
+    input[type="text"]:focus {
+      outline: 2px dashed var(--accent);
+    }
+
+    select,
+    button {
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--fg);
+      border-radius: 10px;
+      padding: 10px 12px;
+      cursor: pointer;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin: 8px 0 12px;
+    }
+
+    .tag-cloud {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+
+    .chip.active {
+      background: var(--accent);
+      color: #000;
+      border-color: transparent;
+      font-weight: 700;
+    }
+
+    /* horizontally scrolling "columns" (sections) */
+    .grid {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 16px;
+      margin-top: 6px;
+      overflow: visible; /* rely on page-level horizontal scroll only */
+      padding: 6px 2px 52px;
+      -webkit-overflow-scrolling: touch;
+      scroll-snap-type: x proximity;
+    }
+
+    .section {
+      flex: 0 0 auto;
+      width: max-content;
+      min-width: 1100px;
+      background: color-mix(in oklab, var(--card) 75%, #000);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px;
+      scroll-snap-align: start;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .section-title {
+      margin: 0 0 10px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+
+    .page-title {
+      font-family: "Space Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .subsections {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 12px;
+      overflow: visible; /* no inner scroll */
+      padding-bottom: 0;
+      -webkit-overflow-scrolling: touch;
+      min-height: 0;
+    }
+
+    .subsection {
+      flex: 0 0 auto;
+      width: max-content;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px;
+      background: color-mix(in oklab, var(--card) 90%, #000);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .subsection-title {
+      margin: 0 0 10px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: none;
+    }
+
+    .subgrid {
+      display: grid;
+      grid-template-rows: repeat(var(--subgrid-rows), auto); /* min 2 rows */
+      grid-auto-flow: column;
+      grid-auto-columns: var(--card-w);
+      gap: 12px;
+      overflow: visible; /* no inner scroll */
+      padding-bottom: 0;
+      min-height: 0;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+      min-width: var(--card-w);
+      max-width: var(--card-w);
+      flex: 0 0 auto;
+    }
+
+    .thumb {
+      height: clamp(140px, 22vh, 210px);
+      width: 100%;
+      object-fit: cover;
+      background: #111;
+    }
+
+    .card-body {
+      padding: 12px;
+    }
+
+    .card-title {
+      font-weight: 650;
+      margin: 2px 0 6px;
+      font-size: 14px;
+    }
+
+    .card-desc {
+      color: var(--muted);
+      font-size: 12px;
+      margin: 0 0 8px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    @media (max-height: 760px) {
+      :root { --card-w: 200px; }
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tag {
+      font-size: 12px;
+      border: 1px solid var(--border);
+      padding: 4px 8px;
+      border-radius: 999px;
+      color: var(--muted);
+    }
+
+    dialog {
+      border: none;
+      border-radius: 16px;
+      padding: 0;
+      max-width: min(900px, 92vw);
+      background: var(--card);
+      color: var(--fg);
+      box-shadow: 0 0 50px 0 rgba(255, 255, 255, 0.5);
+    }
+
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-body {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0;
+      max-height: 80vh;
+      overflow: auto;
+    }
+
+    .modal-media {
+      width: 100%;
+      background: #000;
+      padding-bottom: 8px;
+    }
+
+    .modal-meta {
+      padding: 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    @media (min-width: 840px) {
+      .modal-body {
+        grid-template-columns: 3fr 2fr;
+      }
+
+      .modal-meta {
+        border-top: none;
+        border-left: 1px solid var(--border);
+      }
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .gallery {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .thumb2 {
+      width: 70px;
+      height: 55px;
+      object-fit: cover;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .codebox {
+      margin-top: 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px;
+      background: #0f0f12;
+    }
+
+    .codebox pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: ui-monospace, monospace;
+      font-size: 13px;
+    }
+
+    .meta-description {
+      font-weight: 700;
+      font-size: 16px;
+      margin: 0 0 10px;
+    }
+
+    .meta-small {
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    /* nozzle / motion diagram in modal */
+    .motion-diagram {
+      margin-top: 0;
+      display: inline-flex;
+      gap: 4px;
+      align-items: stretch;
+      justify-content: center;
+      width: max-content;
+      max-width: 100%;
+    }
+
+    .motion-panel {
+      flex: 0 0 170px;
+      background: #111;
+      border-radius: 10px;
+      padding: 6px 6px 4px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: flex-start;
+      min-width: 0;
+    }
+
+    .motion-panel[hidden] {
+      display: none !important;
+    }
+
+    .motion-label {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #000;
+      margin-bottom: 6px;
+      white-space: nowrap;
+    }
+
+    .motion-img-wrap {
+      flex: 1 1 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .motion-img {
+      max-width: 100%;
+      max-height: 80px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .fine-print {
+      position: fixed;
+      left: 16px;
+      bottom: 10px;
+      z-index: 20;
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.35;
+      max-width: min(980px, calc(100vw - 32px));
+      padding: 6px 8px;
+      border-radius: 8px;
+      background: rgba(11, 11, 12, 0.75);
+      backdrop-filter: blur(2px);
+    }
+
+    .fine-print a {
+      color: var(--fg);
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <div class="page-title">Swatchbook</div>
+      </div>
+      <div class="controls">
+        <input id="q" type="text" placeholder="Search…" />
+        <select id="sort">
+          <option value="index-asc">Swatch order 1 → N</option>
+          <option value="index-desc">Swatch order N → 1</option>
+          <option value="title-asc">Title ↑</option>
+          <option value="title-desc">Title ↓</option>
+          <option value="date-desc">Date ↓</option>
+          <option value="date-asc">Date ↑</option>
+        </select>
+      </div>
+    </header>
+
+    <section class="toolbar">
+      <div id="tagCloud" class="tag-cloud"></div>
+      <button id="clearFilters" class="chip">Reset filters</button>
+      <span id="count" class="muted"></span>
+    </section>
+
+    <main class="grid" id="grid" aria-label="Swatches grouped by section"></main>
+    <div class="fine-print">
+      "From pictorial: "The 3D Printer as a Sewing Machine: Untaming Fabrication Narratives for Material Exploration" by Interactive Materials Lab. Explorations by Sheryl Teng
+      <br>
+      Find our 3D Printing Controller here (<a href="https://p5-fab-iml.replit.app/sewingeditor/index.html" target="_blank" rel="noopener noreferrer">https://p5-fab-iml.replit.app/sewingeditor/index.html</a>)
+    </div>
+
+    <dialog id="modal">
+      <div class="modal-head">
+        <div style="display:flex; gap:10px; align-items:center">
+          <strong id="mTitle"></strong>
+          <span class="muted" id="mDate"></span>
+        </div>
+        <button id="mClose" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-media" id="mMedia"></div>
+        <div class="modal-meta">
+          <div id="mDesc" class="meta-description"></div>
+          <div class="muted" id="mMakerMotion"></div>
+          <div class="muted meta-small" id="mApp"></div>
+          <div class="muted meta-small" id="mMachine"></div>
+          <div class="muted meta-small" id="mTextile"></div>
+          <div class="muted meta-small" id="mFilament"></div>
+          <div class="codebox" id="mGcodeWrap" hidden>
+            <strong>G-code</strong>
+            <pre id="mGcode"></pre>
+          </div>
+          <div class="codebox" id="mMotionDiagramWrap" hidden>
+            <strong>G-code Path</strong>
+            <div class="muted" id="mMachineMotion"></div>
+            <div id="mMotionDiagram" class="motion-diagram">
+              <div id="mMotionPanelStart" class="motion-panel" hidden>
+                <div class="motion-label">Nozzle</div>
+                <div class="motion-img-wrap">
+                  <img id="mMotionNozzleStart" class="motion-img" alt="">
+                </div>
+              </div>
+              <div id="mMotionPanelPath" class="motion-panel" hidden>
+                <div class="motion-label">Motion</div>
+                <div class="motion-img-wrap">
+                  <img id="mMotionPath" class="motion-img" alt="">
+                </div>
+              </div>
+              <div id="mMotionPanelEnd" class="motion-panel" hidden>
+                <div class="motion-label">Nozzle</div>
+                <div class="motion-img-wrap">
+                  <img id="mMotionNozzleEnd" class="motion-img" alt="">
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="codebox" id="mValuesWrap" hidden>
+            <strong>Values</strong>
+            <pre id="mValues"></pre>
+          </div>
+          <div id="mTags" style="margin-top:8px"></div>
+        </div>
+      </div>
+    </dialog>
+  </div>
+
+<script id="swatches-data" type="application/json">
+[
+{
+  "title": "Swatch #1",
+  "description": "Flex Rails",
+  "app": "Computer Aided-Design",
+  "machine": "Creality Ender 3 V2 Neo",
+  "materials_textile": "Stretchable mesh",
+  "materials_filament": "PLA",
+  "tags": [
+    "CAD"
+  ],
+  "images": [
+    "images/S1 onion unit 2.JPG",
+    "images/S1 onion unit.JPG"
+  ]
+},
+  {
+    "title": "Swatch #2-9",
+    "description": "Flex buttons: frictions in determining how many layers or minimum thickness for rails to work",
+    "app": "Computer Aided-Design",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "stretchable mesh",
+    "materials_filament": "TPU",
+    "tags": [
+      "CAD"
+    ],
+    "images": [
+      "images/S2-9 buttons.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #10-11",
+    "description": "Failed messy smudges (nozzles pushing too close to fabric)",
+    "app": "Firefly Plugin",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "Assorted fabrics",
+    "materials_filament": "TPU",
+    "tags": [
+      "mistakes/failures"
+    ],
+    "images": [
+      "images/S10 smudges.JPG",
+      "images/S11 smudges.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #12-13",
+    "description": "Explorations with p5fab: learning some coding and understanding the relationship between extrusion and movement rates",
+    "machine": "3D Pen",
+    "materials_textile": "Jersey knit",
+    "materials_filament": "Mix of PLA and TPU",
+    "images": [
+      "images/S12 p5fab.JPG",
+      "images/S13 p5fab.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #14-22",
+    "description": "Explorations with Grasshopper firefly: more direct control over G-code, which we preferred",
+    "app": "Firefly Plugin",
+    "machine": "Creality Ender 3 Pro",
+    "materials_textile": "Assorted fabrics",
+    "materials_filament": "TPU",
+    "machine_motion": "nozzle moving up and down at intervals",
+    "maker_motion": "push fabric through as nozzle lifts and completes each cycle",
+    "tags": [
+      "firefly",
+      "mistakes/failures"
+    ],
+    "images": [
+      "images/S14-22 stitchlines-1.JPG",
+      "images/S14-22 stitchlines-2.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #23-25",
+    "description": "3D Pen + Embroidery = good adhesion",
+    "machine": "3D Pen",
+    "materials_textile": "Jersey knit",
+    "materials_filament": "Mix of PLA and TPU",
+    "tags": [
+      "3D Pen"
+    ],
+    "images": [
+      "images/S23-25 3DP-1.JPG",
+      "images/S23-25 3D Pen Ripples.JPG",
+      "images/S23-25 3DP-3.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #26-31",
+    "description": "More 3D Pen experiments to understand extrusion behaviour",
+    "machine": "3D Pen",
+    "materials_textile": "Jersey knit",
+    "materials_filament": "Mix of PLA and TPU",
+    "tags": [
+      "3D Pen"
+    ],
+    "images": [
+      "images/S26-31 3DP.JPG",
+      "images/S26-31 3DP-4.JPG",
+      "images/S26-31 DSCF0777.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #32-33",
+    "description": "Applying 3D Pen to 3DP with grasshopper firefly",
+    "app": "Firefly Plugin",
+    "machine": "Creality Ender 3 Pro",
+    "materials_textile": "Assorted fabrics",
+    "materials_filament": "TPU",
+    "machine_motion": "nozzle moving up and down at intervals",
+    "maker_motion": "push fabric through as nozzle lifts and completes each cycle",
+    "tags": [
+      "firefly"
+    ],
+    "images": [
+      "images/S32-33 firefly stitches.JPG",
+      "images/S32-33 firefly.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #34",
+    "description": "Ruched (lines)",
+    "app": "Firefly Plugin",
+    "machine": "Creality Ender 3 Pro",
+    "materials_textile": "Chiffon-like (white), jersey (pink)",
+    "materials_filament": "TPU",
+    "machine_motion": "nozzle controlled with firefly to extrude and move at fixed intervals",
+    "tags": [
+      "firefly"
+    ],
+    "images": [
+      "images/S34 ruched-firefly-1.JPG",
+      "images/S34 ruched-firefly-2.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #35",
+    "description": "Ruched (grids)",
+    "app": "Firefly Plugin",
+    "machine": "Creality Ender 3 Pro",
+    "materials_textile": "Chiffon-like (white), jersey (pink)",
+    "materials_filament": "TPU",
+    "machine_motion": "nozzle controlled with firefly to extrude and move at fixed intervals",
+    "tags": [
+      "firefly"
+    ],
+    "images": [
+      "images/S35 Firefly dots-1.JPG",
+      "images/S35 Firefly dots-2.JPG",
+      "images/S35 DSCF6491.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #36",
+    "description": "Tryouts with 3DP controller",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "Embroidery backing",
+    "materials_filament": "PLA",
+    "tags": [
+      "mistakes/failure",
+      "3dpc"
+    ],
+    "images": [
+      "images/S36 Messy.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #37",
+    "description": "Controlling Blobs",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "Embroidery backing",
+    "materials_filament": "PLA",
+    "machine_motion": "extruding with motion controller",
+    "maker_motion": "push fabric through after each blob is completed",
+    "tags": [
+      "mistakes/failure",
+      "3dpc"
+    ],
+    "images": [
+      "images/S37 Controlling blobs.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #38",
+    "description": "Learning 3DP controller2",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "Embroidery backing",
+    "materials_filament": "PLA",
+    "machine_motion": "extrude excessively with motion controller",
+    "maker_motion": "push fabric through slowly while still extruding",
+    "tags": [
+      "mistakes/failure",
+      "3dpc"
+    ],
+    "images": [
+      "images/S38 IMG_6661.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #39",
+    "description": "Pushing the fabric very slowly while nozzle extrudes continuously pressing against the fabric",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "Embroidery backing",
+    "materials_filament": "PLA",
+    "machine_motion": "extrude excessively with motion controller",
+    "maker_motion": "push fabric through slowly while still extruding",
+    "tags": [
+      "mistakes/failure",
+      "3dpc"
+    ],
+    "images": [
+      "images/S39 DSCF1691.JPG",
+      "images/S39 DSCF1692.JPG",
+      "images/S39 DSCF1694.JPG",
+      "images/S39 DSCF1695.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #40",
+    "description": "Finicky Adhesion",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "Jersey knit",
+    "materials_filament": "PLA",
+    "tags": [
+      "in vignette",
+      "3dpc"
+    ],
+    "images": [
+      "images/S40 FInicky Adhesion.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #41",
+    "description": "Sashiko",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "Nylon-spandex knit",
+    "materials_filament": "TPU",
+    "machine_motion": "using motion controller, move Z- to press lightly on fabric, then E+10, Y+10, repeat for a few rows",
+    "motion_diagram": {
+      "motion": "images/motion-line.png"
+    },
+    "tags": [
+      "3dpc"
+    ],
+    "images": [
+      "images/S41 sashiko-3dpc-1.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #42",
+    "description": "Pushing and extruding at different rates repeatedly",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "Polyester Satin",
+    "materials_filament": "TPU",
+    "machine_motion": "using motion controller, move Z- to press lightly on fabric, then E+100, then push fabric through very slowly",
+    "motion_diagram": {
+      "motion": "images/motion-line.png"
+    },
+    "tags": [
+      "3dpc"
+    ],
+    "images": [
+      "images/S42 DSCF1713.JPG",
+      "images/S42 DSCF1716.JPG"
+
+    ]
+  },
+  {
+    "title": "Swatch #43",
+    "description": "Mimicking Stitch",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "Chiffon-like (white), jersey (blue)",
+    "materials_filament": "PA (Nylon)",
+    "machine_motion": "nozzle moves up/down while fabric advances",
+    "motion_diagram": {
+      "nozzle_start": "images/mm-updown.png",
+      "motion": "images/motion-4 point.png"
+    },
+    "gcode": "G91\nG1 Z__z F__fe\nG4 S2\nG1 Z-__z F__fm E__e\nG0 Z-__z F__fm\nG1 F__fe E__eup\nG1 Z__z F__fe E-__eup",
+    "values": "__e: 1.5\n__r: 1.5\n__fe: 150\n__fm: 400\n__z: 5\n__eup: 5\n\ninterval: 2000",
+    "tags": [
+      "3dpc"
+    ],
+    "images": [
+      "images/S43 sewstitch3dpc.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #44",
+    "description": "blob",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 Pro",
+    "materials_textile": "Jersey knit",
+    "materials_filament": "TPU",
+    "gcode": "G1 Z-8.0 E3.4 F72\nG4 P1500\nG1 Z8.0 E1.7 F72",
+    "tags": [
+      "3dpc"
+    ],
+    "images": [
+      "images/S44 blob-3dpc.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #45",
+    "description": "Nozzle burning hole through fabric",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "stretchable mesh",
+    "materials_filament": "TPU",
+    "machine_motion": "when nozzle is above 220 degrees celsius and pushes too hard on filament",
+    "tags": [
+      "3pdc",
+      "mistakes/failure"
+    ],
+    "images": [
+      "images/S45 burning fabric.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #46",
+    "description": "Is it possible to draw a circle with just 4 points?",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "stretchable mesh",
+    "materials_filament": "TPU",
+        "motion_diagram": {
+      "nozzle_start": "images/mm-updown.png"
+    },
+    "gcode": "G91\nG1 Z{2*-__z} F__f E__e\nG4 S0.75\nG1 Z{__z} F__f E__e2\nG1 X{Math.sin(Math.PI/4)*__x} Y{-__y-Math.sin(Math.PI/4)*-__y} F__f2 \nG1 X{__x-Math.sin(Math.PI/4)*__x} Y{Math.sin(Math.PI/4)*-__y} F__f2 \nG1 X{-__x-Math.sin(Math.PI/4)*-__x} Y{Math.sin(Math.PI/4)*-__y} F__f2 \nG1 X{Math.sin(Math.PI/4)*-__x} Y{-__y-Math.sin(Math.PI/4)*-__y} Z__z F__f2 E-__r",
+    "values": "__e: 3\n__x: 10\n__f: 90\n__f2: 120\n__z: 1.5-4.5\n__y: 10 \n__e2: 10\n__r: 10\n\ninterval: 2000",
+    "tags": [
+      "3dpc"
+    ],
+    "images": [
+      "images/S46 semicircle-3dpc.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #47",
+    "description": "Attempts to draw a circle and spiral with turntable",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "stretchable mesh",
+    "materials_filament": "TPU",
+    "gcode": "G91\nG1 Z-{2*__z} F__fm E__e\nG4 S__s1\nG1 Z{2*__z} F__fm E__e\nG4 S__s2",
+    "values": "__e: 6\n__fm: 600\n__z: 2\n__s1: 1\n__s2: 2\n\ninterval: 2000",
+    "maker_motion": "turn the turntable until the circle is complete",
+    "tags": [
+      "3dpc"
+    ],
+    "images": [
+      "images/S47 spiral-turntable-1.JPG",
+      "images/S47 spiral-turntable-2.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #48",
+    "description": "Circle with GPT",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "stretchable mesh",
+    "materials_filament": "TPU",
+    "motion_diagram": {
+      "motion": "images/motion-circle.png"
+    },
+    "tags": [
+      "3dpc"
+    ],
+    "images": [
+      "images/S48 circle-3dpc-gpt.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #49",
+    "description": "G2 X50 Y0 I50 J0: The code does it so effortlessly",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "stretchable mesh",
+    "materials_filament": "TPU",
+    "motion_diagram": {
+      "motion": "images/motion-circle.png"
+    },
+    "tags": [
+      "3dpc"
+    ],
+    "images": [
+      "images/S49 DSCF1741.JPG",
+      "images/S49 DSCF1743.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #50",
+    "description": "Accidentally fuzzy extrusions on a different textile",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "organza",
+    "materials_filament": "TPU",
+    "motion_diagram": {
+      "motion": "images/motion-semicircle.png"
+    },
+    "tags": [
+      "3dpc"
+    ],
+    "images": [
+      "images/S50 DSCF1733.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #51",
+    "description": "4-point semicircles tessellated (small)",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "Jersey knit",
+    "materials_filament": "PA (Nylon)",
+    "motion_diagram": {
+      "motion": "images/motion-4 point.png"
+    },
+    "gcode": "G91\nG1 Z{2*-__z} F__f E__e\nG4 S0.75\nG1 Z{__z} F__f E__e2\nG1 X{Math.sin(Math.PI/4)*__x} Y{-__y-Math.sin(Math.PI/4)*-__y} F__f2 \nG1 X{__x-Math.sin(Math.PI/4)*__x} Y{Math.sin(Math.PI/4)*-__y} F__f2 \nG1 X{-__x-Math.sin(Math.PI/4)*-__x} Y{Math.sin(Math.PI/4)*-__y} F__f2 \nG1 X{Math.sin(Math.PI/4)*-__x} Y{-__y-Math.sin(Math.PI/4)*-__y} Z__z F__f2 E-__r",
+    "values": "__e: 3\n__x: 10\n__f: 90\n__f2: 120\n__z: 1.5\n__y: 10 \n__e2: 10\n__r: 10\n\ninterval: 2500",
+    "tags": [
+      "3dpc"
+    ],
+    "images": [
+      "images/S51 programmable-1.JPG",
+      "images/S51 programmable-1 light.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #52",
+    "description": "Stacked 4-point semicircles (big)",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "Jersey knit",
+    "materials_filament": "PA (Nylon)",
+    "motion_diagram": {
+      "motion": "images/motion-4 point.png"
+    },
+    "gcode": "G91\nG1 Z{2*-__z} F__f E__e\nG4 S0.75\nG1 Z{__z} F__f E__e2\nG1 X{Math.sin(Math.PI/4)*__x} Y{-__y-Math.sin(Math.PI/4)*-__y} F__f2 \nG1 X{__x-Math.sin(Math.PI/4)*__x} Y{Math.sin(Math.PI/4)*-__y} F__f2 \nG1 X{-__x-Math.sin(Math.PI/4)*-__x} Y{Math.sin(Math.PI/4)*-__y} F__f2 \nG1 X{Math.sin(Math.PI/4)*-__x} Y{-__y-Math.sin(Math.PI/4)*-__y} Z__z F__f2 E-__r",
+    "values": "__e: 3\n__x: 10\n__f: 90\n__f2: 120\n__z: 1.5\n__y: 10 \n__e2: 10\n__r: 10\n\ninterval: 2500",
+    "tags": [
+      "3dpc"
+    ],
+    "images": [
+      "images/S52 programmable 2.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #53",
+    "description": "Making blobs like a stitch but without fabric",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "Jersey knit",
+    "materials_filament": "TPU",
+    "gcode": "G91\nG1 Z-__z F__fe E__e\nG1 Z__z F__f E__e\nG4 S__s\nG1 X__x F__fe E__e2\nG0 Z-__z F__f\nG1 Z__z F__f E-__r\nG4 S__s\nG0 X-__x F__f",
+    "values": "__e: 6\n__fe: 10\n__x: 40\n__z: 2.5\n__r: 2\n__f: 100\n__s: 1\n__e2: 10\n__flift: 300",
+    "motion_diagram": {
+      "motion": "images/motion-line.png"
+    },
+    "maker_motion": "move down after completion of each cycle (right, left with coil)",
+    "tags": [
+      "3dpc"
+    ],
+    "images": [
+      "images/S53 DSCF1697.JPG",
+      "images/S53 DSCF1698.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #54",
+    "description": "Updown motion, with a travel in X direction back and forth",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "Jersey knit",
+    "materials_filament": "TPU",
+    "gcode": "G91\nG1 Z-__z F__fe E__e\nG1 Z__z F__f E__e\nG4 S__s\nG1 X__x F__fe E__e2\nG0 Z-__z F__f\nG1 Z__z F__f E-__r\nG4 S__s\nG0 X-__x F__f",
+    "values": "__e: 8\n__fe: 50\n__x: 40\n__z: 1.5\n__r: 2\n__f: 100\n__s: 1\n__e2: 15\n__flift: 300",
+    "motion_diagram": {
+      "motion": "images/motion-line.png"
+    },
+    "maker_motion": "move down after completion of each cycle (right, left with coil)",
+    "tags": [
+      "3dpc"
+    ],
+    "images": [
+      "images/S54 spine1.JPG",
+      "images/S54 spine2.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #55-56",
+    "description": "Explorations with diagonal stitches/lines",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "Jersey knit",
+    "materials_filament": "TPU",
+    "motion_diagram": {
+      "motion": "images/motion-diagonal.png"
+    },
+    "gcode": "G91\nG1 Z-__z1 F__fe E__e\nG4 S__s\nG1 Z__z2 F__f E__e\nG1 X__x Y__y F__fxy\nG1 Z-__z2 F__fe E__e\nG1 Z__z2 F__f E__e\nG1 X-__x Y-__y F__fxy\nG1 Z__z2 F__fe\nG1 Y-__y2 F__fxy\nG1 Z-__z1 F__fe E__e\nG4 S__s\nG1 Z__z2 F__f E__e\nG1 X__x Y__y F__fxy\nG1 Z-__z2 F__fe E__e\nG1 Z__z2 F__f E__e\nG1 X-__x Y-__y F__fxy\nG1 Z__z2 F__fe\nG1 Y-__y2 F__fxy",
+    "values": "__z1: 3\n__z2: 1.5\n__e: 4\n__fe: 200\n__f: 800\n__fxy: 800\n__x: 5\n__y: 10\n__y2: 10\n__s: 1\n\ninterval: 2000",
+    "tags": [
+      "3dpc"
+    ],
+    "images": [
+      "images/S55-56 DSCF1723.JPG",
+      "images/S55-56 DSCF1725.JPG",
+      "images/S55-56 DSCF1727.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #57",
+    "description": "Explorations with diagonal stitches/lines",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "Jersey knit",
+    "materials_filament": "TPU",
+    "motion_diagram": {
+      "motion": "images/motion-diagonal.png"
+    },
+    "gcode": "G91\nG1 Z-__z1 F__fe E__e\nG4 S__s\nG1 Z__z2 F__f E__e\nG1 X__x Y__y F__fxy\nG1 Z-__z2 F__fe E__e\nG1 Z__z2 F__f E__e\nG1 X-__x Y-__y F__fxy\nG1 Z__z2 F__fe\nG1 Y-__y2 F__fxy\nG1 Z-__z1 F__fe E__e\nG4 S__s\nG1 Z__z2 F__f E__e\nG1 X__x Y__y F__fxy\nG1 Z-__z2 F__fe E__e\nG1 Z__z2 F__f E__e\nG1 X-__x Y-__y F__fxy\nG1 Z__z2 F__fe\nG1 Y-__y2 F__fxy",
+    "values": "__z1: 3\n__z2: 1.5\n__e: 4\n__fe: 200\n__f: 800\n__fxy: 800\n__x: 5\n__y: 10\n__y2: 10\n__s: 1\n\ninterval: 2000",
+    "tags": [
+      "3dpc"
+    ],
+    "images": [
+      "images/S57 DSCF1718.JPG",
+      "images/S57 DSCF1720.JPG",
+      "images/S57 DSCF1726.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #58",
+    "description": "Making blobs like a stitch on stretched fabric",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "Jersey knit",
+    "materials_filament": "PET-G",
+    "gcode": "G91\nG1 Z-__z F__fe E__e\nG1 Z__z F__f E__e\nG4 S__s\nG1 X__x F__fe E__e2\nG0 Z-__z F__f\nG1 Z__z F__f E-__r\nG4 S__s\nG0 X-__x F__f",
+    "values": "__e: 6\n__fe: 10\n__x: 40\n__z: 2.5\n__r: 2\n__f: 100\n__s: 1\n__e2: 10\n__flift: 300",
+    "motion_diagram": {
+      "motion": "images/motion-line.png"
+    },
+    "maker_motion": "move down after completion of each cycle (right, left with coil)",
+    "tags": [
+      "3dpc"
+    ],
+    "images": [
+      "images/S58 DSCF1700.JPG"
+    ]
+  },
+
+  {
+    "title": "Swatch #59",
+    "description": "Using finicky adhesions to create square sequins on knit",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "Jersey knit",
+    "materials_filament": "PLA",
+    "gcode": "G91\nG1 Z{2*-__z} F__fe E__e\nG4 S0.5\nG1 Z{1*__z} F__f E__e2\nG1 Y-__y F__f E__e2\nG1 X__x F__f2 E__e2\nG1 Y__y F__f2 E__e2\nG1 X-__x F__f2 E__e2\nG1 Z__z F__f E-__r\nG4 S2\nG0 X{__x+2} F__f2",
+    "values": "__e: 3\n__x: 10\n__f: 90\n__f2: 120\n__z: 1.5\n__y: 10\n__e2: 10\n__r: 10\n\ninterval: 2000",
+    "motion_diagram": {
+      "motion": "images/motion-square.png"
+    },
+    "tags": [
+      "in vignette",
+      "3dpc"
+    ],
+    "images": [
+      "images/S59 sequin-3dpc-stretch.JPG",
+      "images/S59 sequin-3dpc-stretch2.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #60",
+    "description": "Using finicky adhesions to create square sequins on woven",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "Gauze",
+    "materials_filament": "PLA",
+    "gcode": "G91\nG1 Z{2*-__z} F__fe E__e\nG4 S0.5\nG1 Z{1*__z} F__f E__e2\nG1 Y-__y F__f E__e2\nG1 X__x F__f2 E__e2\nG1 Y__y F__f2 E__e2\nG1 X-__x F__f2 E__e2\nG1 Z__z F__f E-__r\nG4 S2\nG0 X{__x+2} F__f2",
+    "values": "__e: 3\n__x: 10\n__f: 90\n__f2: 120\n__z: 1.5\n__y: 10\n__e2: 10\n__r: 10\n\ninterval: 2000",
+    "motion_diagram": {
+      "motion": "images/motion-square.png"
+    },
+    "tags": [
+      "3dpc"
+    ],
+    "images": [
+      "images/S60 sequin-3dpc-woven.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #61",
+    "description": "Playing w GPT to create sine waves",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "Organza",
+    "materials_filament": "PLA",
+    "gcode": "G91\nG1 F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*1/20) - Math.sin(2*Math.PI*0/20)) * __y} F__f E__e\nG1 Z__z F__fs E__e\nG1 X__x Y{(Math.sin(2*Math.PI*2/20) - Math.sin(2*Math.PI*1/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*3/20) - Math.sin(2*Math.PI*2/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*4/20) - Math.sin(2*Math.PI*3/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*5/20) - Math.sin(2*Math.PI*4/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*6/20) - Math.sin(2*Math.PI*5/20)) * __y} F__f\nG1 X__x Y{(Math.sin(2*Math.PI*7/20) - Math.sin(2*Math.PI*6/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*8/20) - Math.sin(2*Math.PI*7/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*9/20) - Math.sin(2*Math.PI*8/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*10/20) - Math.sin(2*Math.PI*9/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*11/20) - Math.sin(2*Math.PI*10/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*12/20) - Math.sin(2*Math.PI*11/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*13/20) - Math.sin(2*Math.PI*12/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*14/20) - Math.sin(2*Math.PI*13/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*15/20) - Math.sin(2*Math.PI*14/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*16/20) - Math.sin(2*Math.PI*15/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*17/20) - Math.sin(2*Math.PI*16/20)) * __y} F__fs E__e\nG1 X__x Y{(Math.sin(2*Math.PI*18/20) - Math.sin(2*Math.PI*17/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*19/20) - Math.sin(2*Math.PI*18/20)) * __y} F__f\nG1 Z-__z F__fs E__e\nG1 X__x Y{(Math.sin(2*Math.PI*20/20) - Math.sin(2*Math.PI*19/20)) * __y} F__fs E-__r",
+    "values": "__e: 4\n__f: 200\n__y: 15\n__x: 4\n__z: 2\n__fs: 90\n__r: 3\n\ninterval: 500",
+    "motion_diagram": {
+      "motion": "images/motion-sine.png"
+    },
+    "tags": [
+      "in vignette",
+      "3dpc"
+    ],
+    "images": [
+      "images/S61 sinesamegcode-diff-z3.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #62",
+    "description": "Same sine waves but different Z heights",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "Organza",
+    "materials_filament": "PLA",
+    "gcode": "G91\nG1 F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*1/20) - Math.sin(2*Math.PI*0/20)) * __y} F__f E__e\nG1 Z__z F__fs E__e\nG1 X__x Y{(Math.sin(2*Math.PI*2/20) - Math.sin(2*Math.PI*1/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*3/20) - Math.sin(2*Math.PI*2/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*4/20) - Math.sin(2*Math.PI*3/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*5/20) - Math.sin(2*Math.PI*4/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*6/20) - Math.sin(2*Math.PI*5/20)) * __y} F__f\nG1 X__x Y{(Math.sin(2*Math.PI*7/20) - Math.sin(2*Math.PI*6/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*8/20) - Math.sin(2*Math.PI*7/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*9/20) - Math.sin(2*Math.PI*8/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*10/20) - Math.sin(2*Math.PI*9/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*11/20) - Math.sin(2*Math.PI*10/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*12/20) - Math.sin(2*Math.PI*11/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*13/20) - Math.sin(2*Math.PI*12/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*14/20) - Math.sin(2*Math.PI*13/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*15/20) - Math.sin(2*Math.PI*14/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*16/20) - Math.sin(2*Math.PI*15/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*17/20) - Math.sin(2*Math.PI*16/20)) * __y} F__fs E__e\nG1 X__x Y{(Math.sin(2*Math.PI*18/20) - Math.sin(2*Math.PI*17/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*19/20) - Math.sin(2*Math.PI*18/20)) * __y} F__f\nG1 Z-__z F__fs E__e\nG1 X__x Y{(Math.sin(2*Math.PI*20/20) - Math.sin(2*Math.PI*19/20)) * __y} F__fs E-__r",
+    "values": "__e: 4\n__f: 200\n__y: 15\n__x: 4\n__z: 2\n__fs: 90\n__r: 3\n\ninterval: 500",
+    "motion_diagram": {
+      "motion": "images/motion-sine.png"
+    },
+    "tags": [
+      "in vignette",
+      "3dpc"
+    ],
+    "images": [
+      "images/S62 sinesamegcode-diff-z2.JPG",
+      "images/S62 sinesamegcode-diff-z.JPG",
+      "images/S62 sinesamegcode-diff-z4.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #63",
+    "description": "Same sine waves but using TPU",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "Stretchable mesh",
+    "materials_filament": "TPU",
+    "gcode": "G91\nG1 F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*1/20) - Math.sin(2*Math.PI*0/20)) * __y} F__f E__e\nG1 Z__z F__fs E__e\nG1 X__x Y{(Math.sin(2*Math.PI*2/20) - Math.sin(2*Math.PI*1/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*3/20) - Math.sin(2*Math.PI*2/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*4/20) - Math.sin(2*Math.PI*3/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*5/20) - Math.sin(2*Math.PI*4/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*6/20) - Math.sin(2*Math.PI*5/20)) * __y} F__f\nG1 X__x Y{(Math.sin(2*Math.PI*7/20) - Math.sin(2*Math.PI*6/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*8/20) - Math.sin(2*Math.PI*7/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*9/20) - Math.sin(2*Math.PI*8/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*10/20) - Math.sin(2*Math.PI*9/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*11/20) - Math.sin(2*Math.PI*10/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*12/20) - Math.sin(2*Math.PI*11/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*13/20) - Math.sin(2*Math.PI*12/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*14/20) - Math.sin(2*Math.PI*13/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*15/20) - Math.sin(2*Math.PI*14/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*16/20) - Math.sin(2*Math.PI*15/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*17/20) - Math.sin(2*Math.PI*16/20)) * __y} F__fs E__e\nG1 X__x Y{(Math.sin(2*Math.PI*18/20) - Math.sin(2*Math.PI*17/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*19/20) - Math.sin(2*Math.PI*18/20)) * __y} F__f\nG1 Z-__z F__fs E__e\nG1 X__x Y{(Math.sin(2*Math.PI*20/20) - Math.sin(2*Math.PI*19/20)) * __y} F__fs E-__r",
+    "values": "__e: 4\n__f: 200\n__y: 15\n__x: 4\n__z: 2\n__fs: 90\n__r: 3\n\ninterval: 500",
+    "motion_diagram": {
+      "motion": "images/motion-sine.png"
+    },
+    "tags": [
+      "in vignette",
+      "3dpc"
+    ],
+    "images": [
+      "images/S63 sinetpu-stretch.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #64",
+    "description": "Sine4",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "Organza",
+    "materials_filament": "TPU",
+    "gcode": "G91\nG1 F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*1/20) - Math.sin(2*Math.PI*0/20)) * __y} F__f E__e\nG1 Z__z F__fs E__e\nG1 X__x Y{(Math.sin(2*Math.PI*2/20) - Math.sin(2*Math.PI*1/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*3/20) - Math.sin(2*Math.PI*2/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*4/20) - Math.sin(2*Math.PI*3/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*5/20) - Math.sin(2*Math.PI*4/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*6/20) - Math.sin(2*Math.PI*5/20)) * __y} F__f\nG1 X__x Y{(Math.sin(2*Math.PI*7/20) - Math.sin(2*Math.PI*6/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*8/20) - Math.sin(2*Math.PI*7/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*9/20) - Math.sin(2*Math.PI*8/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*10/20) - Math.sin(2*Math.PI*9/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*11/20) - Math.sin(2*Math.PI*10/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*12/20) - Math.sin(2*Math.PI*11/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*13/20) - Math.sin(2*Math.PI*12/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*14/20) - Math.sin(2*Math.PI*13/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*15/20) - Math.sin(2*Math.PI*14/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*16/20) - Math.sin(2*Math.PI*15/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*17/20) - Math.sin(2*Math.PI*16/20)) * __y} F__fs E__e\nG1 X__x Y{(Math.sin(2*Math.PI*18/20) - Math.sin(2*Math.PI*17/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*19/20) - Math.sin(2*Math.PI*18/20)) * __y} F__f\nG1 Z-__z F__fs E__e\nG1 X__x Y{(Math.sin(2*Math.PI*20/20) - Math.sin(2*Math.PI*19/20)) * __y} F__fs E-__r",
+    "values": "__e: 4\n__f: 200\n__y: 15\n__x: 4\n__z: 2\n__fs: 90\n__r: 3\n\ninterval: 500",
+    "motion_diagram": {
+      "motion": "images/motion-sine.png"
+    },
+    "tags": [
+      "3dpc"
+    ],
+    "images": [
+      "images/S64 sinesamegcode-diff tpu.JPG",
+      "images/S64 sinetpu-woven.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #65",
+    "description": "Sine5",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "Jersey knit",
+    "materials_filament": "PA (Nylon)",
+    "gcode": "G91\nG1 F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*1/20) - Math.sin(2*Math.PI*0/20)) * __y} F__f E__e\nG1 Z__z F__fs E__e\nG1 X__x Y{(Math.sin(2*Math.PI*2/20) - Math.sin(2*Math.PI*1/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*3/20) - Math.sin(2*Math.PI*2/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*4/20) - Math.sin(2*Math.PI*3/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*5/20) - Math.sin(2*Math.PI*4/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*6/20) - Math.sin(2*Math.PI*5/20)) * __y} F__f\nG1 X__x Y{(Math.sin(2*Math.PI*7/20) - Math.sin(2*Math.PI*6/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*8/20) - Math.sin(2*Math.PI*7/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*9/20) - Math.sin(2*Math.PI*8/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*10/20) - Math.sin(2*Math.PI*9/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*11/20) - Math.sin(2*Math.PI*10/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*12/20) - Math.sin(2*Math.PI*11/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*13/20) - Math.sin(2*Math.PI*12/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*14/20) - Math.sin(2*Math.PI*13/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*15/20) - Math.sin(2*Math.PI*14/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*16/20) - Math.sin(2*Math.PI*15/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*17/20) - Math.sin(2*Math.PI*16/20)) * __y} F__fs E__e\nG1 X__x Y{(Math.sin(2*Math.PI*18/20) - Math.sin(2*Math.PI*17/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*19/20) - Math.sin(2*Math.PI*18/20)) * __y} F__f\nG1 Z-__z F__fs E__e\nG1 X__x Y{(Math.sin(2*Math.PI*20/20) - Math.sin(2*Math.PI*19/20)) * __y} F__fs E-__r",
+    "values": "__e: 4\n__f: 200\n__y: 15\n__x: 4\n__z: 2\n__fs: 90\n__r: 3\n\ninterval: 500",
+    "motion_diagram": {
+      "motion": "images/motion-sine.png"
+    },
+    "tags": [
+      "3dpc"
+    ],
+    "images": [
+      "images/S65 sine stretch PA.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #66",
+    "description": "Smaller sine waves, tessellating and overlapping",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "Mesh knit",
+    "materials_filament": "PA (Nylon)",
+    "gcode": "G91\nG1 F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*1/20) - Math.sin(2*Math.PI*0/20)) * __y} F__f E__e\nG1 Z__z F__fs E__e\nG1 X__x Y{(Math.sin(2*Math.PI*2/20) - Math.sin(2*Math.PI*1/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*3/20) - Math.sin(2*Math.PI*2/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*4/20) - Math.sin(2*Math.PI*3/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*5/20) - Math.sin(2*Math.PI*4/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*6/20) - Math.sin(2*Math.PI*5/20)) * __y} F__f\nG1 X__x Y{(Math.sin(2*Math.PI*7/20) - Math.sin(2*Math.PI*6/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*8/20) - Math.sin(2*Math.PI*7/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*9/20) - Math.sin(2*Math.PI*8/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*10/20) - Math.sin(2*Math.PI*9/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*11/20) - Math.sin(2*Math.PI*10/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*12/20) - Math.sin(2*Math.PI*11/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*13/20) - Math.sin(2*Math.PI*12/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*14/20) - Math.sin(2*Math.PI*13/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*15/20) - Math.sin(2*Math.PI*14/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*16/20) - Math.sin(2*Math.PI*15/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*17/20) - Math.sin(2*Math.PI*16/20)) * __y} F__fs E__e\nG1 X__x Y{(Math.sin(2*Math.PI*18/20) - Math.sin(2*Math.PI*17/20)) * __y} F__f E__e\nG1 X__x Y{(Math.sin(2*Math.PI*19/20) - Math.sin(2*Math.PI*18/20)) * __y} F__f\nG1 Z-__z F__fs E__e\nG1 X__x Y{(Math.sin(2*Math.PI*20/20) - Math.sin(2*Math.PI*19/20)) * __y} F__fs E-__r",
+    "values": "__e: 4\n__f: 200\n__y: 10\n__x: 4\n__z: 2\n__fs: 90\n__r: 3\n\ninterval: 500",
+    "motion_diagram": {
+      "motion": "images/motion-sine.png"
+    },
+    "tags": [
+      "3dpc"
+    ],
+    "images": [
+      "images/S66 DSCF1701.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #67",
+    "description": "Revisiting stitches as dots and lines",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "Jersey knit",
+    "materials_filament": "TPU",
+    "gcode": "G91\nG1 Z-__z F__f E__e\nG1 Z__z F__f E__e\nG1 E-__r F__f\nG4 S__s\nG1 X__x F__fx E__e",
+    "values": "__z: 4\n__f: 500\n__fx: 150\n__e: 1.5\n__r: 1.5\n__x: 7.5\n__s: 1",
+    "motion_diagram": {
+      "motion": "images/motion-line.png"
+    },
+    "tags": [
+      "3dpc"
+    ],
+    "images": [
+      "images/S67 DSCF1729.JPG",
+      "images/S67 DSCF1730.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #68",
+    "description": "Pleats/Revisiting stitches as dots and lines",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "Jersey knit",
+    "materials_filament": "TPU",
+    "gcode": "G91\nG1 Z-__z F__f E__e\nG1 Z__z F__f E__e\nG1 E-__r F__f\nG4 S__s\nG1 X__x F__fx E__e",
+    "values": "__z: 4\n__f: 500\n__fx: 150\n__e: 10\n__r: 7\n__x: 10\n__s: 1",
+    "motion_diagram": {
+      "motion": "images/motion-line.png"
+    },
+    "tags": [
+      "3dpc"
+    ],
+    "images": [
+      "images/S68 IMG_8238.JPG",
+      "images/S68 IMG_8239.JPG"
+    ]
+  },
+  {
+    "title": "Swatch #69",
+    "description": "Puffy Sequins",
+    "app": "3DP Controller",
+    "machine": "Creality Ender 3 V2 Neo",
+    "materials_textile": "Stretchable mesh",
+    "materials_filament": "TPU Varioshore",
+    "filament_temperature_C": 215,
+    "gcode": "G91\nG1 Z-__z F__fm E__e\nG1 Z-__z F__fm E__e\nG1 Z__z F__fe E__e\nG1 Z__z F__fm\nG4 S__s",
+    "values": "__e: 1.5\n__fe: 200\n__fm: 600\n__z: 1\n__s: 10",
+    "tags": [
+      "in vignette",
+      "3dpc",
+      "glitch"
+    ],
+    "images": [
+      "images/S69 tpu varioshore.JPG",
+      "images/S69 tpu varioshore2-back.JPG"
+    ]
+  }
+]
+</script>
+
+<script>
+(function(){
+  var els = {
+    grid: document.getElementById('grid'),
+    q: document.getElementById('q'),
+    sort: document.getElementById('sort'),
+    count: document.getElementById('count'),
+    tagCloud: document.getElementById('tagCloud'),
+    clearFilters: document.getElementById('clearFilters'),
+    // removed file/jsonUrl/btnFetch controls
+    modal: document.getElementById('modal'),
+    mTitle: document.getElementById('mTitle'),
+    mDate: document.getElementById('mDate'),
+    mMedia: document.getElementById('mMedia'),
+    mDesc: document.getElementById('mDesc'),
+    mTextile: document.getElementById('mTextile'),
+    mFilament: document.getElementById('mFilament'),
+    mMachineMotion: document.getElementById('mMachineMotion'),
+    mMakerMotion: document.getElementById('mMakerMotion'),
+    mTags: document.getElementById('mTags'),
+    mClose: document.getElementById('mClose'),
+    // NEW: references for code blocks
+    mApp: document.getElementById('mApp'),
+    mMachine: document.getElementById('mMachine'),
+    mGcodeWrap: document.getElementById('mGcodeWrap'),
+    mGcode: document.getElementById('mGcode'),
+    mValuesWrap: document.getElementById('mValuesWrap'),
+    mValues: document.getElementById('mValues'),
+    // NEW: nozzle / motion diagram
+    mMotionDiagramWrap: document.getElementById('mMotionDiagramWrap'),
+    mMotionDiagram: document.getElementById('mMotionDiagram'),
+    mMotionPanelStart: document.getElementById('mMotionPanelStart'),
+    mMotionPanelPath: document.getElementById('mMotionPanelPath'),
+    mMotionPanelEnd: document.getElementById('mMotionPanelEnd'),
+    mMotionNozzleStart: document.getElementById('mMotionNozzleStart'),
+    mMotionPath: document.getElementById('mMotionPath'),
+    mMotionNozzleEnd: document.getElementById('mMotionNozzleEnd'),
+  };
+
+  var data = [];
+  var state = { q: "", tag: null, sort: "index-asc" };
+
+  function esc(s){ return String(s).replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+  function parseJSON(raw){ return Array.isArray(raw)?raw: (raw && Array.isArray(raw.swatches)? raw.swatches: []); }
+  function uniq(arr){ return Array.from(new Set(arr)); }
+  function by(k,dir){ return (a,b)=> (String(a[k]||'').localeCompare(String(b[k]||'')))*dir; }
+  function byDate(dir){ return (a,b)=> (new Date(a.date||0) - new Date(b.date||0))*dir; }
+  function deriveTags(list){ return uniq(list.flatMap(x=> Array.isArray(x.tags)? x.tags:[])).sort(); }
+  function swatchNum(x){
+    const t = String((x && x.title) || "");
+    const m = t.match(/#\s*(\d+)/);
+    return m ? Number(m[1]) : null;
+  }
+  function twoLineTitle(s){
+    const raw = String(s || '').trim();
+    if (!raw) return '&nbsp;<br>&nbsp;';
+
+    if (raw.includes(':')) {
+      const parts = raw.split(':');
+      const left = parts.shift().trim();
+      const right = parts.join(':').trim();
+      return esc(left + ':') + '<br>' + esc(right || '\u00a0');
+    }
+
+    const words = raw.split(/\s+/).filter(Boolean);
+    if (words.length === 1) {
+      return esc(words[0]) + '<br>&nbsp;';
+    }
+
+    const mid = Math.ceil(words.length / 2);
+    const line1 = words.slice(0, mid).join(' ');
+    const line2 = words.slice(mid).join(' ');
+    return esc(line1) + '<br>' + esc(line2 || '\u00a0');
+  }
+
+  function normalizeItem(x){
+    // tags: accept array, comma/semicolon string, or single token
+    const tags = Array.isArray(x.tags)
+      ? x.tags
+      : (x.tags ? String(x.tags).split(/[;,]/).map(s=>s.trim()).filter(Boolean) : []);
+
+    // images: ensure array
+    const images = Array.isArray(x.images) ? x.images : (x.image ? [x.image] : []);
+
+    // motion aliases: motion / machine_motion / maker_motion
+    const motion = x.motion || x.machine_motion || x.maker_motion || '';
+
+    return {
+      ...x,
+      tags,
+      images,
+      motion
+    };
+  }
+
+   function loadFromEmbedded(){
+    const el = document.getElementById('swatches-data');
+    if(!el) return false;
+    try{
+      const raw = JSON.parse(el.textContent);
+      data = parseJSON(raw).map(normalizeItem).map((x,i)=>({ ...x, __id: i }));
+      renderTags(); render();
+      return true;
+    } catch(e){
+      console.error('Embedded JSON parse error:', e);
+      return false;
+    }
+  }
+
+  if(!loadFromEmbedded()){
+    // fallback to fetch swatches.json if no embedded data
+    fetch("swatches.json")
+      .then(r=>r.json())
+      .then(raw => { data=parseJSON(raw).map(normalizeItem).map((x,i)=>({ ...x, __id: i })); renderTags(); render(); });
+  }
+
+  function render(){
+    const q = state.q.toLowerCase();
+    let list = data.filter(x=>{
+      const hay = [x.title, x.description].concat(x.tags||[]).join(" ").toLowerCase();
+      return (!q || hay.includes(q)) && (!state.tag || (x.tags||[]).includes(state.tag));
+    });
+
+    switch(state.sort){
+      case 'index-asc': /* keep original order */ break;
+      case 'index-desc': list = list.slice().reverse(); break;
+      case 'title-asc': list.sort(by('title', +1)); break;
+      case 'title-desc': list.sort(by('title', -1)); break;
+      case 'date-asc': list.sort(byDate(+1)); break;
+      case 'date-desc': list.sort(byDate(-1)); break;
+    }
+
+    const byId = Object.create(null);
+    data.forEach(x => { if (x && x.__id != null) byId[String(x.__id)] = x; });
+
+    function classify(x){
+      const n = swatchNum(x);
+
+      // Section 0 — Pre-3D Printing Controller (explicit swatch # ranges)
+      if (n != null && n >= 1 && n <= 35) {
+        if (n >= 1 && n <= 9) {
+          return { section: 0, subsection: 0 }; // CAD-Slice-Print frictions
+        }
+        if (n >= 10 && n <= 13) {
+          return { section: 0, subsection: 1 }; // 3D Print Bed
+        }
+        if ((n >= 14 && n <= 22) || (n >= 32 && n <= 35)) {
+          return { section: 0, subsection: 2 }; // Alternative softwares
+        }
+        if (n >= 23 && n <= 31) {
+          return { section: 0, subsection: 3 }; // 3D Pen
+        }
+      }
+
+      // Section 1 — Untaming with the 3D Printing Controller (swatch #35+)
+      const title = String(x.title || '').toLowerCase();
+      const desc = String(x.description || '').toLowerCase();
+      const hay = (title + " " + desc);
+      const n2 = n == null ? -1 : n;
+
+      // explicit Untaming ranges (order matters)
+      if (n2 >= 36 && n2 <= 44) {
+        return { section: 1, subsection: 0 }; // Being a Sewing Machine
+      }
+      if (n2 >= 45 && n2 <= 53) {
+        return { section: 1, subsection: 1 }; // Back to the 3D Printer
+      }
+      if (n2 === 55 || n2 === 56 || n2 === 57 || n2 === 58 || n2 === 59 || n2 === 60 || n2 === 67 || n2 === 68 || n2 === 69) {
+        return { section: 1, subsection: 2 }; // Taking a Line for a Walk
+      }
+
+      // heuristic buckets (order matters)
+      if (
+        hay.includes('sashiko') ||
+        hay.includes('stitch') ||
+        hay.includes('sew') ||
+        hay.includes('spine') ||
+        (n2 >= 20 && n2 <= 21)
+      ) return { section: 1, subsection: 0 }; // Being a Sewing Machine
+
+      if (
+        hay.includes('inflatable') ||
+        hay.includes('sequin') ||
+        hay.includes('adhesion') ||
+        hay.includes('heatseal')
+      ) return { section: 1, subsection: 1 }; // Back to the 3D Printer
+
+      return { section: 1, subsection: 2 }; // Taking a Line for a Walk (default)
+    }
+
+    const sections = [
+      {
+        title: "Pre-3D Printing Controller",
+        subs: [
+          "Our firsthand frictions with CAD-Slice-Print Workflows",
+          "Exploring Hardware Interventions: 3D Print Bed",
+          "Exploring Alternative Softwares",
+          "Exploring Hardware Interventions: 3D Pen",
+        ],
+      },
+      {
+        title: "Untaming with the 3D Printing Controller",
+        subs: [
+          "Being a Sewing Machine",
+          "Back to the 3D Printer",
+          "Taking a Line for a Walk",
+        ],
+      },
+    ];
+
+    const buckets = sections.map(s => s.subs.map(() => []));
+    list.forEach(x=>{
+      const c = classify(x);
+      buckets[c.section][c.subsection].push(x);
+    });
+
+    function sectionHTML(sectionIdx){
+      const s = sections[sectionIdx];
+      const subs = s.subs.map((subTitle, subIdx)=>{
+        const items = buckets[sectionIdx][subIdx];
+        const cards = items.map(cardHTML).join('');
+        const displaySubTitle = twoLineTitle(subTitle);
+        return (
+          '<div class="subsection">' +
+            '<div class="subsection-title">'+displaySubTitle+'</div>' +
+            '<div class="subgrid">'+cards+'</div>' +
+          '</div>'
+        );
+      }).join('');
+      return (
+        '<section class="section" data-section="'+sectionIdx+'">' +
+          '<h2 class="section-title">'+esc(s.title)+'</h2>' +
+          '<div class="subsections">' + subs + '</div>' +
+        '</section>'
+      );
+    }
+
+    els.grid.innerHTML = sectionHTML(0) + sectionHTML(1);
+
+    els.grid.querySelectorAll('.card').forEach((c)=>{
+      function activate(){
+        const id = c.getAttribute('data-id');
+        if (id != null && byId[id]) openModal(byId[id]);
+      }
+      c.addEventListener('click', activate);
+      c.addEventListener('keydown', (e)=>{
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          activate();
+        }
+      });
+    });
+
+    els.count.textContent = list.length+" shown / "+data.length+" total";
+  }
+
+  function cardHTML(x){
+    const imgSrc = x.poster || x.image || (Array.isArray(x.images)&&x.images[0]) || "";
+    const media = imgSrc ? '<img class="thumb" alt="" src="'+esc(imgSrc)+'">' : '<div class="thumb"></div>';
+    const tags = (x.tags||[]).map(t=> '<span class="tag">'+esc(t)+'</span>').join('');
+    const id = (x && x.__id != null) ? String(x.__id) : '';
+    return '<article class="card" role="button" tabindex="0" data-id="'+esc(id)+'"><div>'+media+'</div><div class="card-body"><div class="card-title">'+esc(x.title||'Untitled')+'</div><p class="card-desc">'+esc(x.description||'')+'</p><div class="tags">'+tags+'</div></div></article>';
+  }
+
+  function openModal(x){
+    els.mTitle.textContent = x.title || 'Untitled';
+    els.mDate.textContent  = x.date ? (' · ' + x.date) : '';
+
+    // MEDIA + GALLERY
+    els.mMedia.innerHTML = '';
+    const imgs = Array.isArray(x.images) ? x.images : (x.image ? [x.image] : []);
+    if (imgs.length){
+      const main = document.createElement('img');
+      main.src = imgs[0];
+      main.style.width = '100%';
+      els.mMedia.appendChild(main);
+
+      const g = document.createElement('div');
+      g.className = 'gallery';
+      imgs.forEach(src=>{
+        const t = document.createElement('img');
+        t.className = 'thumb2';
+        t.src = src;
+        t.onclick = ()=> { main.src = src; };
+        g.appendChild(t);
+      });
+      els.mMedia.appendChild(g);
+    } else {
+      els.mMedia.textContent = 'No media';
+    }
+
+    // DETAILS (text fields)
+    els.mDesc.textContent      = x.description || '';
+    els.mTextile.textContent  = x.materials_textile  ? ('Textile(s): '  + x.materials_textile)  : '';
+    els.mFilament.textContent = x.materials_filament ? ('Filament(s): ' + x.materials_filament) : '';
+    els.mMachineMotion.textContent    = x.machine_motion || '';
+    els.mMakerMotion.textContent    = x.maker_motion ? ('Notes: ' + x.maker_motion) : '';
+    els.mApp.textContent       = x.app ? ('App: ' + x.app) : '';
+    els.mMachine.textContent   = x.machine ? ('Machine: ' + x.machine) : '';
+
+    // NOZZLE / MOTION DIAGRAM
+    const n = swatchNum(x);
+    const defaultNozzle = "images/mm-updown.png";
+    const fallbackDiagram = (
+      (n != null && n >= 46) ? { motion: "images/mm-motion.png" } : null
+    );
+    const dRaw = x.motion_diagram || fallbackDiagram;
+    const d = dRaw ? ({ ...dRaw, nozzle_start: dRaw.nozzle_start || defaultNozzle }) : ({ nozzle_start: defaultNozzle });
+    if (d && (d.nozzle_start || d.motion || d.nozzle_end)){
+      const hasStart = !!d.nozzle_start;
+      const hasMotion = !!d.motion;
+      const hasEnd = !!d.nozzle_end;
+
+      function syncMotionWrapHidden(){
+        els.mMotionDiagramWrap.hidden =
+          els.mMotionPanelStart.hidden &&
+          els.mMotionPanelPath.hidden &&
+          els.mMotionPanelEnd.hidden;
+      }
+
+      els.mMotionDiagramWrap.hidden = false;
+
+      els.mMotionPanelStart.hidden = !hasStart;
+      els.mMotionPanelPath.hidden  = !hasMotion;
+      els.mMotionPanelEnd.hidden   = !hasEnd;
+
+      els.mMotionNozzleStart.src = hasStart ? d.nozzle_start : '';
+      els.mMotionPath.src        = hasMotion ? d.motion : '';
+      els.mMotionNozzleEnd.src   = hasEnd ? d.nozzle_end : '';
+
+      // If the PNG path is wrong/unreachable, hide the panel automatically.
+      els.mMotionNozzleStart.onerror = () => { els.mMotionPanelStart.hidden = true; syncMotionWrapHidden(); };
+      els.mMotionPath.onerror = () => { els.mMotionPanelPath.hidden = true; syncMotionWrapHidden(); };
+      els.mMotionNozzleEnd.onerror = () => { els.mMotionPanelEnd.hidden = true; syncMotionWrapHidden(); };
+
+      syncMotionWrapHidden();
+    } else {
+      els.mMotionDiagramWrap.hidden = true;
+      els.mMotionPanelStart.hidden = true;
+      els.mMotionPanelPath.hidden  = true;
+      els.mMotionPanelEnd.hidden   = true;
+      els.mMotionNozzleStart.src = '';
+      els.mMotionPath.src        = '';
+      els.mMotionNozzleEnd.src   = '';
+    }
+
+    // G-CODE + VALUES (multiline preserved)
+    if (x.gcode){
+      els.mGcodeWrap.hidden = false;
+      els.mGcode.textContent = x.gcode;   // already contains \n from your JSON
+    } else {
+      els.mGcodeWrap.hidden = true;
+      els.mGcode.textContent = '';
+    }
+
+    if (x.values){
+      els.mValuesWrap.hidden = false;
+      els.mValues.textContent = x.values; // already contains \n from your JSON
+    } else {
+      els.mValuesWrap.hidden = true;
+      els.mValues.textContent = '';
+    }
+
+    // TAGS
+    els.mTags.innerHTML = (x.tags || []).map(t => '<span class="tag">'+esc(t)+'</span>').join('');
+
+    els.modal.showModal();
+  }
+
+  els.mClose.addEventListener('click', ()=> els.modal.close());
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape' && els.modal.open) els.modal.close(); });
+
+  els.q.addEventListener('input', ()=>{ state.q=els.q.value.trim(); render(); });
+  els.sort.addEventListener('change', ()=>{ state.sort=els.sort.value; render(); });
+  els.clearFilters.addEventListener('click', ()=>{ state.q=''; state.tag=null; els.q.value=''; renderTags(); render(); });
+
+  // Use mouse wheel / trackpad motion to pan the page horizontally.
+  // The page is the single horizontal scroll container.
+  window.addEventListener('wheel', (e)=>{
+    if (els.modal.open) return;
+    const maxX = document.documentElement.scrollWidth - window.innerWidth;
+    if (maxX <= 0) return;
+
+    const target = e.target;
+    const el = target instanceof Element ? target : null;
+    if (el && el.closest('input, textarea, select, button, dialog')) return;
+
+    // Prefer the dominant axis so wheel + trackpad gestures both feel natural.
+    let delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    if (!delta) return;
+
+    // Normalize line-based wheel deltas.
+    if (e.deltaMode === 1) delta *= 16;
+
+    e.preventDefault();
+    window.scrollBy({ left: delta, behavior: 'auto' });
+  }, { passive: false });
+
+  function renderTags(){
+    const tags = deriveTags(data);
+    els.tagCloud.innerHTML = tags.map(t=> '<button class="chip'+(state.tag===t?' active':'')+'" data-tag="'+t+'">#'+t+'</button>').join('');
+    els.tagCloud.querySelectorAll('button').forEach(btn=>{
+      btn.onclick = ()=>{ state.tag = (state.tag===btn.dataset.tag)?null:btn.dataset.tag; renderTags(); render(); };
+    });
+  }
+})();
+</script>
+</body>
+</html>
